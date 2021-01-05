@@ -96,6 +96,7 @@ services:
       - MYSQL_USER=mysqluser
       - MYSQL_PASSWORD=mysqlpw
 
+  # https://docs.confluent.io/platform/current/connect/userguide.html
   kafka-connect:
     image: debezium/connect:1.4
     ports:
@@ -121,3 +122,9 @@ services:
       PROXY: "true"
     depends_on:
       - kafka-connect
+
+  clickhouse-server:
+    image: yandex/clickhouse-server
+    ports:
+      - 8123:8123  # http interface
+      - 9000:9000  # native client

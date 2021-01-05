@@ -1,0 +1,12 @@
+FROM debezium/connect:1.4
+
+ENV CONFLUENT_VERSION=5.5.1 \
+    CLICKHOUSE_CLIENT_VERSION=0.2.4 \
+    MAVEN_REPO_CENTRAL="" \
+    MAVEN_REPOS_ADDITIONAL="" \
+    MAVEN_DEP_DESTINATION=$KAFKA_CONNECT_PLUGINS_DIR \
+    CONNECT_JDBC_MD5=ea632e0956792055f220539d24a353b8 \
+    CLICKHOUSE_JDBC_MD5=ae8c305ec8c08d7b199b918f08876705
+
+RUN docker-maven-download confluent kafka-connect-jdbc "$CONFLUENT_VERSION" "$CONNECT_JDBC_MD5" && \
+    docker-maven-download central ru/yandex/clickhouse clickhouse-jdbc "$CLICKHOUSE_CLIENT_VERSION" "$CLICKHOUSE_JDBC_MD5"
