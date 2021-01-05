@@ -1,0 +1,123 @@
+version: '2'
+
+# refs:
+# https://github.com/confluentinc
+# https://github.com/lensesio
+# https://github.com/streamthoughts/awesome-opensource-contribs-kafka
+# https://cwiki.apache.org/confluence/display/KAFKA/Ecosystem
+# https://github.com/confluentinc/kafka-images
+# https://github.com/simplesteph/kafka-stack-docker-compose
+# https://github.com/lensesio/fast-data-dev
+# https://github.com/debezium/docker-images
+# https://github.com/debezium/debezium-examples
+
+services:
+  zookeeper:
+    image: zookeeper:3.5.8
+    ports:
+      - 2181:2181 # clientPort
+      - 2888:2888 # note the two port numbers after each server name: " 2888" and "3888".
+      - 3888:3888 # ZooKeeper server uses this port to connect followers to the leader
+      - 8080:8080 # http://localhost:8080/commands/stat
+  kafka:
+    image: debezium/kafka:1.4              # kafka:2.6.0
+    ports:
+      - 9092:9092                          # kafka port
+    links:
+      - zookeeper
+    environment:
+      - ZOOKEEPER_CONNECT=zookeeper:2181
+
+  # https://docs.confluent.io/platform/current/schema-registry/index.html
+  kafka-schema-registry:
+    image: confluentinc/cp-schema-registry:5.5.1
+    ports:
+      - 8081:8081
+    links:
+      - zookeeper
+      - kafka
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
+      SCHEMA_REGISTRY_HOST_NAME: kafka-schema-registry
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+
+  # ui for schema-registry
+  schema-registry-ui:
+    image: landoop/schema-registry-ui:0.9.5
+    hostname: kafka-schema-registry-ui
+    ports:
+      - 8001:8000
+    environment:
+      SCHEMAREGISTRY_URL: http://kafka-schema-registry:8081/
+      PROXY: 'true'
+    links:
+      - kafka-schema-registry
+
+  # The Kafka REST Proxy provides a RESTful interface to a Kafka cluster.
+  # It makes it easy to produce and consume messages, view the state of the cluster,
+  # and perform administrative actions without using the native Kafka protocol or clients.
+  kafka-rest-proxy:
+    image: confluentinc/cp-kafka-rest:5.5.1
+    hostname: kafka-rest-proxy
+    ports:
+      - 8082:8082
+    links:
+      - zookeeper
+      - kafka
+      - kafka-schema-registry
+    environment:
+      # KAFKA_REST_ZOOKEEPER_CONNECT: zoo1:2181
+      KAFKA_REST_LISTENERS: http://0.0.0.0:8082/
+      KAFKA_REST_SCHEMA_REGISTRY_URL: http://kafka-schema-registry:8081/
+      KAFKA_REST_HOST_NAME: kafka-rest-proxy
+      KAFKA_REST_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
+
+  # This is a web tool for the confluentinc/kafka-rest proxy.
+  kafka-topics-ui:
+    image: landoop/kafka-topics-ui:0.9.4
+    hostname: kafka-topics-ui
+    ports:
+      - 8000:8000
+    links:
+      - zookeeper
+      - kafka
+      - kafka-schema-registry
+      - kafka-rest-proxy
+    environment:
+      KAFKA_REST_PROXY_URL: "http://kafka-rest-proxy:8082/"
+      PROXY: "true"
+
+  mysql:
+    image: debezium/example-mysql:1.4
+    ports:
+      - 3306:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=debezium
+      - MYSQL_USER=mysqluser
+      - MYSQL_PASSWORD=mysqlpw
+
+  kafka-connect:
+    image: debezium/connect:1.4
+    ports:
+      - 8083:8083
+    links:
+      - kafka
+      - mysql
+    environment:
+      - BOOTSTRAP_SERVERS=kafka:9092
+      - GROUP_ID=1
+      - CONFIG_STORAGE_TOPIC=my_connect_configs
+      - OFFSET_STORAGE_TOPIC=my_connect_offsets
+      - STATUS_STORAGE_TOPIC=my_connect_statuses
+
+  # Web tool for Kafka Connect
+  kafka-connect-ui:
+    image: landoop/kafka-connect-ui:0.9.7
+    hostname: kafka-connect-ui
+    ports:
+      - "8003:8000"
+    environment:
+      CONNECT_URL: "http://kafka-connect:8083/"
+      PROXY: "true"
+    depends_on:
+      - kafka-connect
