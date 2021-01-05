@@ -49,19 +49,6 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
       SCHEMA_REGISTRY_HOST_NAME: kafka-schema-registry
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
-
-  # ui for schema-registry
-  schema-registry-ui:
-    image: landoop/schema-registry-ui:0.9.5
-    hostname: kafka-schema-registry-ui
-    ports:
-      - 8001:8000
-    environment:
-      SCHEMAREGISTRY_URL: http://kafka-schema-registry:8081/
-      PROXY: 'true'
-    links:
-      - kafka-schema-registry
-
   # The Kafka REST Proxy provides a RESTful interface to a Kafka cluster.
   # It makes it easy to produce and consume messages, view the state of the cluster,
   # and perform administrative actions without using the native Kafka protocol or clients.
@@ -80,46 +67,6 @@ services:
       KAFKA_REST_SCHEMA_REGISTRY_URL: http://kafka-schema-registry:8081/
       KAFKA_REST_HOST_NAME: kafka-rest-proxy
       KAFKA_REST_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
-
-  # This is a web tool for the confluentinc/kafka-rest proxy.
-  kafka-topics-ui:
-    image: landoop/kafka-topics-ui:0.9.4
-    hostname: kafka-topics-ui
-    ports:
-      - 8000:8000
-    links:
-      - zookeeper
-      - kafka
-      - kafka-schema-registry
-      - kafka-rest-proxy
-    environment:
-      KAFKA_REST_PROXY_URL: "http://kafka-rest-proxy:8082/"
-      PROXY: "true"
-
-  mysql:
-    image: debezium/example-mysql:1.4
-    ports:
-      - 3306:3306
-    environment:
-      - MYSQL_ROOT_PASSWORD=debezium
-      - MYSQL_USER=mysqluser
-      - MYSQL_PASSWORD=mysqlpw
-
-  # https://docs.confluent.io/platform/current/connect/userguide.html
-  #  kafka-connect:
-  #    image: holmofy/kafka-connect:1.0
-  #    ports:
-  #      - 8083:8083
-  #    links:
-  #      - kafka
-  #      - mysql
-  #      - clickhouse-server
-  #    environment:
-  #      - BOOTSTRAP_SERVERS=kafka:9092
-  #      - GROUP_ID=1
-  #      - CONFIG_STORAGE_TOPIC=my_connect_configs
-  #      - OFFSET_STORAGE_TOPIC=my_connect_offsets
-  #      - STATUS_STORAGE_TOPIC=my_connect_statuses
   kafka-connect:
     image: confluentinc/cp-kafka-connect:5.5.1
     hostname: kafka-connect
@@ -154,17 +101,31 @@ services:
       - kafka-schema-registry
       - kafka-rest-proxy
 
-  # Web tool for Kafka Connect
-  kafka-connect-ui:
-    image: landoop/kafka-connect-ui:0.9.7
-    hostname: kafka-connect-ui
+  kafka-center-db:
+    image: holmofy/kafka-center-db:1.0
     ports:
-      - "8003:8000"
+      - 3307:3306
     environment:
-      CONNECT_URL: "http://kafka-connect:8083/"
-      PROXY: "true"
-    depends_on:
+      - MYSQL_ROOT_PASSWORD=123456
+  kafka-center:
+    image: xaecbd/kafka-center:2.3.0
+    ports:
+      - 8080:8080
+    links:
+      - kafka
       - kafka-connect
+      - kafka-center-db
+    volumes:
+      - ./kafka-center/application.properties:/opt/app/kafka-center/config/application.properties
+
+  mysql:
+    image: debezium/example-mysql:1.4
+    ports:
+      - 3306:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=debezium
+      - MYSQL_USER=mysqluser
+      - MYSQL_PASSWORD=mysqlpw
 
   clickhouse-server:
     image: yandex/clickhouse-server
