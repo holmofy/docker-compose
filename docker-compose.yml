@@ -101,6 +101,31 @@ services:
       - kafka-schema-registry
       - kafka-rest-proxy
 
+  ##################################
+  #  kafka management:             #
+  #  CMAK & kafdrop & kafka-center #
+  #  & burrow write by go          #
+  ##################################
+  kafka_manager:
+    image: hlebalbau/kafka-manager:stable
+    ports:
+      - 19000:9000
+    environment:
+      ZK_HOSTS: zookeeper:2181
+      APPLICATION_SECRET: "random-secret"
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop
+    ports:
+      - 19001:9000
+    links:
+      - kafka
+      - zookeeper
+      - kafka-schema-registry
+    environment:
+      - KAFKA_BROKERCONNECT=kafka:9092
+      - CMD_ARGS="--message.format=AVRO --schemaregistry.connect=http://kafka-schema-registry:8081"
+
   kafka-center-db:
     image: holmofy/kafka-center-db:1.0
     ports:
@@ -110,13 +135,27 @@ services:
   kafka-center:
     image: xaecbd/kafka-center:2.3.0
     ports:
-      - 8084:8080
+      - 19002:8080
     links:
       - kafka
       - kafka-connect
       - kafka-center-db
     volumes:
       - ./kafka-center/application.properties:/opt/app/kafka-center/config/application.properties
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    ports:
+      - 19003:9000
+    links:
+      - kafka
+      - zookeeper
+      - kafka-schema-registry
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=kafka
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
+      - KAFKA_CLUSTERS_0_SCHEMAREGISTRY="http://kafka-schema-registry:8081"
 
   mysql:
     image: debezium/example-mysql:1.4
