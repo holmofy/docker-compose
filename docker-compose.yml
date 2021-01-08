@@ -1,161 +1,164 @@
-version: '3'
-
-# refs:
-# https://github.com/confluentinc
-# https://github.com/lensesio
-# https://github.com/streamthoughts/awesome-opensource-contribs-kafka
-# https://cwiki.apache.org/confluence/display/KAFKA/Ecosystem
-# https://github.com/confluentinc/kafka-images
-# https://github.com/confluentinc/cp-docker-images
-# https://github.com/simplesteph/kafka-stack-docker-compose
-# https://github.com/lensesio/fast-data-dev
-# https://github.com/debezium/docker-images
-# https://github.com/debezium/debezium-examples
-
+---
+version: '2'
 services:
   zookeeper:
-    image: zookeeper:3.5.8
+    image: confluentinc/cp-zookeeper:6.0.1
+    hostname: zookeeper
+    container_name: zookeeper
     ports:
       - 2181:2181 # clientPort
       - 2888:2888 # note the two port numbers after each server name: " 2888" and "3888".
       - 3888:3888 # ZooKeeper server uses this port to connect followers to the leader
       - 8080:8080 # http://localhost:8080/commands/stat
-  kafka:
-    image: debezium/kafka:1.4              # kafka:2.6.0
-    ports:
-      - 9092:9092                          # kafka port
-    links:
-      - zookeeper
     environment:
-      - ZOOKEEPER_CONNECT=zookeeper:2181
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    deploy:
-      resources:
-        limits:
-          memory: 200M
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
 
-  # https://docs.confluent.io/platform/current/schema-registry/index.html
-  kafka-schema-registry:
-    image: confluentinc/cp-schema-registry:5.5.1
-    ports:
-      - 8081:8081
-    links:
+  broker:
+    image: confluentinc/cp-server:6.0.1
+    depends_on:
       - zookeeper
-      - kafka
+    ports:
+      - "9092:9092"
+      - "9101:9101"
     environment:
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
-      SCHEMA_REGISTRY_HOST_NAME: kafka-schema-registry
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:6.0.1
+    hostname: schema-registry
+    container_name: schema-registry
+    depends_on:
+      - broker
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper:2181
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
-  # The Kafka REST Proxy provides a RESTful interface to a Kafka cluster.
-  # It makes it easy to produce and consume messages, view the state of the cluster,
-  # and perform administrative actions without using the native Kafka protocol or clients.
-  kafka-rest-proxy:
-    image: confluentinc/cp-kafka-rest:5.5.1
-    hostname: kafka-rest-proxy
+
+  connect:
+    image: confluentinc/cp-kafka-connect:6.0.1
+    depends_on:
+      - broker
+      - schema-registry
     ports:
-      - 8082:8082
-    links:
-      - zookeeper
-      - kafka
-      - kafka-schema-registry
+      - "8083:8083"
     environment:
-      # KAFKA_REST_ZOOKEEPER_CONNECT: zoo1:2181
-      KAFKA_REST_LISTENERS: http://0.0.0.0:8082/
-      KAFKA_REST_SCHEMA_REGISTRY_URL: http://kafka-schema-registry:8081/
-      KAFKA_REST_HOST_NAME: kafka-rest-proxy
-      KAFKA_REST_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
-  kafka-connect:
-    image: confluentinc/cp-kafka-connect:5.5.1
-    hostname: kafka-connect
-    ports:
-      - 8083:8083
-    environment:
-      CONNECT_BOOTSTRAP_SERVERS: "kafka:9092"
+      CONNECT_BOOTSTRAP_SERVERS: 'broker:9092'
+      CONNECT_REST_ADVERTISED_HOST_NAME: connect
       CONNECT_REST_PORT: 8083
       CONNECT_GROUP_ID: compose-connect-group
       CONNECT_CONFIG_STORAGE_TOPIC: docker-connect-configs
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_FLUSH_INTERVAL_MS: 10000
       CONNECT_OFFSET_STORAGE_TOPIC: docker-connect-offsets
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
       CONNECT_STATUS_STORAGE_TOPIC: docker-connect-status
-      CONNECT_KEY_CONVERTER: io.confluent.connect.avro.AvroConverter
-      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: 'http://kafka-schema-registry:8081'
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
       CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
-      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: 'http://kafka-schema-registry:8081'
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
       CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
       CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
-      CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
-      CONNECT_LOG4J_ROOT_LOGLEVEL: "INFO"
-      CONNECT_LOG4J_LOGGERS: "org.apache.kafka.connect.runtime.rest=WARN,org.reflections=ERROR"
-      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
-      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
-      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
-      CONNECT_PLUGIN_PATH: '/usr/share/java,/etc/kafka-connect/jars'
+      # CLASSPATH required due to CC-2422
+      CLASSPATH: /usr/share/java/monitoring-interceptors/monitoring-interceptors-6.0.1.jar
+      CONNECT_PRODUCER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor"
+      CONNECT_CONSUMER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor"
+      CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
+      CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR
     volumes:
-      - ./connectors:/etc/kafka-connect/jars/
-      # https://debezium.io/documentation/reference/install.html
+      - ./connectors:/usr/share/confluent-hub-components
+
+  control-center:
+    image: confluentinc/cp-enterprise-control-center:6.0.1
     depends_on:
-      - zookeeper
-      - kafka
-      - kafka-schema-registry
-      - kafka-rest-proxy
-
-  ##################################
-  #  kafka management:             #
-  #  CMAK & kafdrop & kafka-center #
-  #  & burrow write by go          #
-  ##################################
-  kafka_manager:
-    image: hlebalbau/kafka-manager:stable
+      - broker
+      - schema-registry
+      - connect
+      - ksqldb-server
     ports:
-      - 19000:9000
+      - "9021:9021"
     environment:
-      ZK_HOSTS: zookeeper:2181
-      APPLICATION_SECRET: "random-secret"
+      CONTROL_CENTER_BOOTSTRAP_SERVERS: 'broker:9092'
+      CONTROL_CENTER_CONNECT_CLUSTER: 'connect:8083'
+      CONTROL_CENTER_KSQL_KSQLDB1_URL: "http://ksqldb-server:8088"
+      CONTROL_CENTER_KSQL_KSQLDB1_ADVERTISED_URL: "http://localhost:8088"
+      CONTROL_CENTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
+      CONTROL_CENTER_REPLICATION_FACTOR: 1
+      CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
+      CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
+      CONFLUENT_METRICS_TOPIC_REPLICATION: 1
+      PORT: 9021
 
-  kafdrop:
-    image: obsidiandynamics/kafdrop
+  ksqldb-server:
+    image: confluentinc/cp-ksqldb-server:6.0.1
+    depends_on:
+      - broker
+      - connect
     ports:
-      - 19001:9000
-    links:
-      - kafka
-      - zookeeper
-      - kafka-schema-registry
+      - "8088:8088"
     environment:
-      - KAFKA_BROKERCONNECT=kafka:9092
-      - CMD_ARGS="--message.format=AVRO --schemaregistry.connect=http://kafka-schema-registry:8081"
+      KSQL_CONFIG_DIR: "/etc/ksql"
+      KSQL_BOOTSTRAP_SERVERS: "broker:9092"
+      KSQL_HOST_NAME: ksqldb-server
+      KSQL_LISTENERS: "http://0.0.0.0:8088"
+      KSQL_CACHE_MAX_BYTES_BUFFERING: 0
+      KSQL_KSQL_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
+      KSQL_PRODUCER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor"
+      KSQL_CONSUMER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor"
+      KSQL_KSQL_CONNECT_URL: "http://connect:8083"
+      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_REPLICATION_FACTOR: 1
+      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: 'true'
+      KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: 'true'
 
-  kafka-center-db:
-    image: holmofy/kafka-center-db:1.0
-    ports:
-      - 3307:3306
-    environment:
-      - MYSQL_ROOT_PASSWORD=123456
-  kafka-center:
-    image: xaecbd/kafka-center:2.3.0
-    ports:
-      - 19002:8080
-    links:
-      - kafka
-      - kafka-connect
-      - kafka-center-db
-    volumes:
-      - ./kafka-center/application.properties:/opt/app/kafka-center/config/application.properties
+  ksqldb-cli:
+    image: confluentinc/cp-ksqldb-cli:6.0.1
+    container_name: ksqldb-cli
+    depends_on:
+      - broker
+      - connect
+      - ksqldb-server
+    entrypoint: /bin/sh
+    tty: true
 
-  kafka-ui:
-    image: provectuslabs/kafka-ui
-    ports:
-      - 19003:9000
-    links:
-      - kafka
-      - zookeeper
-      - kafka-schema-registry
+  ksql-datagen:
+    image: confluentinc/ksqldb-examples:6.0.1
+    hostname: ksql-datagen
+    container_name: ksql-datagen
+    depends_on:
+      - ksqldb-server
+      - broker
+      - schema-registry
+      - connect
+    command: "bash -c 'echo Waiting for Kafka to be ready... && \
+                       cub kafka-ready -b broker:9092 1 40 && \
+                       echo Waiting for Confluent Schema Registry to be ready... && \
+                       cub sr-ready schema-registry 8081 40 && \
+                       echo Waiting a few seconds for topic creation to finish... && \
+                       sleep 11 && \
+                       tail -f /dev/null'"
     environment:
-      - KAFKA_CLUSTERS_0_NAME=kafka
-      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
-      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
-      - KAFKA_CLUSTERS_0_SCHEMAREGISTRY="http://kafka-schema-registry:8081"
+      KSQL_CONFIG_DIR: "/etc/ksql"
+      STREAMS_BOOTSTRAP_SERVERS: broker:9092
+      STREAMS_SCHEMA_REGISTRY_HOST: schema-registry
+      STREAMS_SCHEMA_REGISTRY_PORT: 8081
+
+  rest-proxy:
+    image: confluentinc/cp-kafka-rest:6.0.1
+    depends_on:
+      - broker
+      - schema-registry
+    ports:
+      - 8082:8082
+    hostname: rest-proxy
+    container_name: rest-proxy
+    environment:
+      KAFKA_REST_HOST_NAME: rest-proxy
+      KAFKA_REST_BOOTSTRAP_SERVERS: 'broker:9092'
+      KAFKA_REST_LISTENERS: "http://0.0.0.0:8082"
+      KAFKA_REST_SCHEMA_REGISTRY_URL: 'http://schema-registry:8081'
 
   mysql:
     image: debezium/example-mysql:1.4
