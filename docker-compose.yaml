@@ -28,10 +28,7 @@ services:
       - 8123:8123  # http interface
       - 9000:9000  # native client
   connect:
-    image: holmofy/kafka-connect
-    build:
-      context: debezium-jdbc-es
-      dockerfile: Dockerfile
+    image: holmofy/kafka-connect:1.0
     ports:
       - 8083:8083
       - 5005:5005
