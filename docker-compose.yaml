@@ -28,6 +28,7 @@ services:
       - 8123:8123  # http interface
       - 9000:9000  # native client
   connect:
+    image: holmofy/kafka-connect
     build:
       context: debezium-jdbc-es
       dockerfile: Dockerfile
@@ -51,3 +52,63 @@ services:
       - 19003:8000
     environment:
       - CONNECT_URL=http://connect:8083
+
+
+  # https://docs.confluent.io/platform/current/schema-registry/index.html
+  kafka-schema-registry:
+    image: confluentinc/cp-schema-registry:5.5.1
+    ports:
+      - 8081:8081
+    links:
+      - zookeeper
+      - kafka
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
+      SCHEMA_REGISTRY_HOST_NAME: kafka-schema-registry
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+
+  # ui for schema-registry
+  schema-registry-ui:
+    image: landoop/schema-registry-ui:0.9.5
+    hostname: kafka-schema-registry-ui
+    ports:
+      - 8001:8000
+    environment:
+      SCHEMAREGISTRY_URL: http://kafka-schema-registry:8081/
+      PROXY: 'true'
+    links:
+      - kafka-schema-registry
+
+  # The Kafka REST Proxy provides a RESTful interface to a Kafka cluster.
+  # It makes it easy to produce and consume messages, view the state of the cluster,
+  # and perform administrative actions without using the native Kafka protocol or clients.
+  kafka-rest-proxy:
+    image: confluentinc/cp-kafka-rest:5.5.1
+    hostname: kafka-rest-proxy
+    ports:
+      - 8082:8082
+    links:
+      - zookeeper
+      - kafka
+      - kafka-schema-registry
+    environment:
+      # KAFKA_REST_ZOOKEEPER_CONNECT: zoo1:2181
+      KAFKA_REST_LISTENERS: http://0.0.0.0:8082/
+      KAFKA_REST_SCHEMA_REGISTRY_URL: http://kafka-schema-registry:8081/
+      KAFKA_REST_HOST_NAME: kafka-rest-proxy
+      KAFKA_REST_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
+
+  # This is a web tool for the confluentinc/kafka-rest proxy.
+  kafka-topics-ui:
+    image: landoop/kafka-topics-ui:0.9.4
+    hostname: kafka-topics-ui
+    ports:
+      - 8000:8000
+    links:
+      - zookeeper
+      - kafka
+      - kafka-schema-registry
+      - kafka-rest-proxy
+    environment:
+      KAFKA_REST_PROXY_URL: "http://kafka-rest-proxy:8082/"
+      PROXY: "true"
