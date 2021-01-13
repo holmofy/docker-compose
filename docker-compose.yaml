@@ -27,8 +27,11 @@ services:
     ports:
       - 8123:8123  # http interface
       - 9000:9000  # native client
+    volumes:
+      - ./clickhouse:/docker-entrypoint-initdb.d
+
   connect:
-    image: holmofy/kafka-connect:1.2
+    image: holmofy/kafka-connect:1.31
     ports:
       - 8083:8083
       - 5005:5005
@@ -109,3 +112,15 @@ services:
     environment:
       KAFKA_REST_PROXY_URL: "http://kafka-rest-proxy:8082/"
       PROXY: "true"
+
+  consumer-app:
+    image: holmofy/consumer-app
+    build:
+      context: ./kafka-cdc-consumer/
+      dockerfile: Dockerfile
+    environment:
+      - JVM_OPTIONS='-Dmysql.datasource.url=jdbc:mysql://mysql:3306/inventory -Dspring.kafka.bootstrap-servers=kafka:9092'
+    links:
+      - kafka
+      - mysql
+      - clickhouse-server
