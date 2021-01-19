@@ -118,9 +118,16 @@ services:
     build:
       context: ./kafka-cdc-consumer/
       dockerfile: Dockerfile
+      args:
+        - JAR_FILE=./target/cdc-consumer-0.0.1-SNAPSHOT.jar
     environment:
-      - JVM_OPTIONS='-Dmysql.datasource.url=jdbc:mysql://mysql:3306/inventory -Dspring.kafka.bootstrap-servers=kafka:9092'
+      - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=55005
+    ports:
+      - 55005:55005  # debug port
     links:
       - kafka
+      - connect
+      - kafka-rest-proxy
+      - kafka-schema-registry
       - mysql
       - clickhouse-server
