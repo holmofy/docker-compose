@@ -9,6 +9,7 @@ services:
       - 2181:2181
       - 2888:2888
       - 3888:3888
+
   kafka-broker:
     image: holmofy/kafka:1.0
     build:
@@ -20,6 +21,10 @@ services:
       - zookeeper
     environment:
       - ZOOKEEPER_CONNECT=zookeeper:2181
+    volumes:
+      - /docker-compose/kafka/data:/kafka/data
+      - /docker-compose/kafka/log:/kafka/logs
+
   mysql-server:
     image: holmofy/example-mysql:1.0
     build:
@@ -31,6 +36,9 @@ services:
       - MYSQL_ROOT_PASSWORD=debezium
       - MYSQL_USER=mysqluser
       - MYSQL_PASSWORD=mysqlpw
+    volumes:
+      - /docker-compose/mysql/data:/var/lib/mysql
+
   clickhouse-server:
     image: yandex/clickhouse-server
     ports:
@@ -38,6 +46,7 @@ services:
       - 9000:9000  # native client
     volumes:
       - ./clickhouse:/docker-entrypoint-initdb.d
+      - /docker-compose/clickhouse:/var/lib/clickhouse
 
   connect:
     image: holmofy/kafka-connect:1.31
@@ -124,22 +133,28 @@ services:
       KAFKA_REST_PROXY_URL: "http://kafka-rest-proxy:8082/"
       PROXY: "true"
 
-  consumer-app:
-    image: holmofy/consumer-app
-    build:
-      context: ./kafka-cdc-consumer/
-      dockerfile: Dockerfile
-      args:
-        - JAR_FILE=./target/cdc-consumer-0.0.1-SNAPSHOT.jar
-    environment:
-      # debug options
-      - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=55005
+  canal-server:
+    image: canal/canal-server:v1.1.4
+    hostname: canal-server
     ports:
-      - 55005:55005  # debug port
-    links:
-      - connect
-      - kafka-broker
-      - kafka-rest-proxy
-      - kafka-schema-registry
-      - mysql-server
-      - clickhouse-server
+      - 11110  # admin
+      - 11111  # canal
+      - 11112  # metrics
+      - 9100   # exporter
+    environment:
+      # position info
+      - canal.instance.master.address=
+      - canal.instance.dbUsername=
+      - canal.instance.dbPassword=
+      - canal.instance.connectionCharset=
+      - canal.instance.tsdb.enable=
+      - canal.instance.gtidon=
+
+  canal-admin:
+    image: canal/canal-admin:v1.1.4
+    hostname: canal-admin
+    environment:
+      - spring.datasource.address=
+      - spring.datasource.database=
+      - spring.datasource.username=
+      - spring.datasource.password=
