@@ -10,7 +10,10 @@ services:
       - 2888:2888
       - 3888:3888
   kafka-broker:
-    image: debezium/kafka:1.0
+    image: holmofy/kafka:1.0
+    build:
+      context: ./kafka
+      dockerfile: Dockerfile
     ports:
       - 9092:9092
     links:
@@ -38,15 +41,18 @@ services:
 
   connect:
     image: holmofy/kafka-connect:1.31
+    build:
+      context: ./connect
+      dockerfile: Dockerfile
     ports:
       - 8083:8083   # rest api
       - 5005:5005
     links:
-      - kafka
+      - kafka-broker
       - mysql
       - clickhouse-server
     environment:
-      - BOOTSTRAP_SERVERS=kafka:9092
+      - BOOTSTRAP_SERVERS=kafka-broker:9092
       - GROUP_ID=1
       - CONFIG_STORAGE_TOPIC=my_connect_configs
       - OFFSET_STORAGE_TOPIC=my_connect_offsets
@@ -66,9 +72,9 @@ services:
       - 8081:8081
     links:
       - zookeeper
-      - kafka
+      - kafka-broker
     environment:
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka-broker:9092
       SCHEMA_REGISTRY_HOST_NAME: kafka-schema-registry
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
 
@@ -94,14 +100,14 @@ services:
       - 8082:8082
     links:
       - zookeeper
-      - kafka
+      - kafka-broker
       - kafka-schema-registry
     environment:
       # KAFKA_REST_ZOOKEEPER_CONNECT: zoo1:2181
       KAFKA_REST_LISTENERS: http://0.0.0.0:8082/
       KAFKA_REST_SCHEMA_REGISTRY_URL: http://kafka-schema-registry:8081/
       KAFKA_REST_HOST_NAME: kafka-rest-proxy
-      KAFKA_REST_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
+      KAFKA_REST_BOOTSTRAP_SERVERS: PLAINTEXT://kafka-broker:9092
 
   # This is a web tool for the confluentinc/kafka-rest proxy.
   kafka-topics-ui:
@@ -111,7 +117,7 @@ services:
       - 8000:8000
     links:
       - zookeeper
-      - kafka
+      - kafka-broker
       - kafka-schema-registry
       - kafka-rest-proxy
     environment:
@@ -131,8 +137,8 @@ services:
     ports:
       - 55005:55005  # debug port
     links:
-      - kafka
       - connect
+      - kafka-broker
       - kafka-rest-proxy
       - kafka-schema-registry
       - mysql
