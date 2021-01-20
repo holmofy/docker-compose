@@ -1,21 +1,27 @@
 version: '2'
 services:
   zookeeper:
-    image: debezium/zookeeper:${DEBEZIUM_VERSION}
+    image: holmofy/zookeeper:1.0
+    build:
+      context: ./zookeeper
+      dockerfile: Dockerfile
     ports:
       - 2181:2181
       - 2888:2888
       - 3888:3888
-  kafka:
-    image: debezium/kafka:${DEBEZIUM_VERSION}
+  kafka-broker:
+    image: debezium/kafka:1.0
     ports:
       - 9092:9092
     links:
       - zookeeper
     environment:
       - ZOOKEEPER_CONNECT=zookeeper:2181
-  mysql:
-    image: debezium/example-mysql:${DEBEZIUM_VERSION}
+  mysql-server:
+    image: holmofy/example-mysql:1.0
+    build:
+      context: ./mysql
+      dockerfile: Dockerfile
     ports:
       - 3306:3306
     environment:
