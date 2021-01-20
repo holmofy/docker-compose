@@ -49,7 +49,7 @@ services:
       - 5005:5005
     links:
       - kafka-broker
-      - mysql
+      - mysql-server
       - clickhouse-server
     environment:
       - BOOTSTRAP_SERVERS=kafka-broker:9092
@@ -141,5 +141,5 @@ services:
       - kafka-broker
       - kafka-rest-proxy
       - kafka-schema-registry
-      - mysql
+      - mysql-server
       - clickhouse-server
