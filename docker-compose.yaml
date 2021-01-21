@@ -20,6 +20,9 @@ services:
       - zookeeper
     environment:
       - ZOOKEEPER_CONNECT=zookeeper:2181
+    volumes:
+      - ~/kafka-compose-data/kafka/data:/kafka/data:z
+      - ~/kafka-compose-data/kafka/log:/kafka/logs:z
   mysql-server:
     image: holmofy/example-mysql:1.0
     build:
@@ -31,6 +34,8 @@ services:
       - MYSQL_ROOT_PASSWORD=debezium
       - MYSQL_USER=mysqluser
       - MYSQL_PASSWORD=mysqlpw
+    volumes:
+      - ~/kafka-compose-data/mysql/data:/var/lib/mysql:z
   clickhouse-server:
     image: yandex/clickhouse-server
     ports:
@@ -38,6 +43,7 @@ services:
       - 9000:9000  # native client
     volumes:
       - ./clickhouse:/docker-entrypoint-initdb.d
+      - ~/kafka-compose-data/clickhouse:/var/lib/clickhouse:z
 
   connect:
     image: holmofy/kafka-connect:1.31
