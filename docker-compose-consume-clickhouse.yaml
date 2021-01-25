@@ -39,6 +39,11 @@ services:
       - MYSQL_ROOT_PASSWORD=debezium
       - MYSQL_USER=mysqluser
       - MYSQL_PASSWORD=mysqlpw
+  clickhouse-server:
+    image: yandex/clickhouse-server
+    ports:
+      - 8123:8123  # http interface
+      - 9000:9000  # native client
 
   connect:
     image: holmofy/kafka-connect:1.31
@@ -123,3 +128,23 @@ services:
     environment:
       KAFKA_REST_PROXY_URL: "http://kafka-rest-proxy:8082/"
       PROXY: "true"
+
+  consumer-app:
+    image: holmofy/consumer-app
+    build:
+      context: ./kafka-cdc-consumer/
+      dockerfile: Dockerfile
+      args:
+        - JAR_FILE=./target/cdc-consumer-0.0.1-SNAPSHOT.jar
+    environment:
+      # debug options
+      - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=55005
+    ports:
+      - 55005:55005  # debug port
+    links:
+      - connect
+      - kafka-broker
+      - kafka-rest-proxy
+      - kafka-schema-registry
+      - mysql-server
+      - clickhouse-server
