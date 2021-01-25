@@ -57,7 +57,6 @@ services:
       - CONFIG_STORAGE_TOPIC=my_connect_configs
       - OFFSET_STORAGE_TOPIC=my_connect_offsets
       - STATUS_STORAGE_TOPIC=my_source_connect_statuses
-      - KAFKA_CONNECT_PLUGINS_DIR=
 
   kafka-connect-ui:
     image: landoop/kafka-connect-ui
