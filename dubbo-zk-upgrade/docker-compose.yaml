@@ -1,0 +1,32 @@
+version: "3"
+
+services:
+  zk-old:
+    image: zookeeper:3.4.9
+    ports:
+      - 12181:2181
+  dubbo-admin-old:
+    image: apache/dubbo-admin
+    depends_on:
+      - zk-old
+    ports:
+      - 8080:8080
+    environment:
+      - admin.registry.address=zookeeper://zk-old:2181
+      - admin.config-center=zookeeper://zk-old:2181
+      - admin.metadata-report.address=zookeeper://zk-old:2181
+
+  zk-new:
+    image: zookeeper:3.6.2
+    ports:
+      - 22181:2181
+  dubbo-admin-new:
+    image: apache/dubbo-admin
+    depends_on:
+      - zk-new
+    ports:
+      - 8081:8080
+    environment:
+      - admin.registry.address=zookeeper://zk-new:2181
+      - admin.config-center=zookeeper://zk-new:2181
+      - admin.metadata-report.address=zookeeper://zk-new:2181

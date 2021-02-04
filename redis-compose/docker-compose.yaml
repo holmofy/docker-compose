@@ -1,0 +1,27 @@
+version: "2"
+
+services:
+  redis-server:
+    image: redis:6.2-rc-alpine
+    ports:
+      - 6379:6379
+  redis-ai:
+    image: redisai/redisai
+
+  # redis ui base web
+  redis-insight:
+    image: redislabs/redisinsight:1.9.0
+    ports:
+      - 8001:8001
+  redis-webcli:
+    image: redislabs/redis-webcli
+  redis-commander:
+    image: rediscommander/redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+  # other web gui
+  # redis-browser
+  # rebrow
+  # https://github.com/search?q=redis+ui
