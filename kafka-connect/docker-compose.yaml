@@ -1,0 +1,29 @@
+version: '2'
+
+services: 
+  zookeeper: 
+    image: zookeeper:3.5.9
+    ports:
+      - 2181:2181
+  kafka-broker:
+    image: debezium/kafka:1.5
+    ports:
+      - 9092:9092
+    depends_on:
+      - zookeeper
+    environment:
+      - ZOOKEEPER_CONNECT=zookeeper:2181
+  kafka-connect:
+    image: holmofy/kafka-connect:1.5
+    build: 
+      context: ./kafka-connect
+      dockerfile: Dockerfile
+    ports: 
+      - 8083:8083
+    depends_on: 
+      - kafka-broker
+    environment:
+     - BOOTSTRAP_SERVERS=kafka-broker:9092
+     - CONFIG_STORAGE_TOPIC=hermes-connect-configs
+     - OFFSET_STORAGE_TOPIC=hermes-connect-offsets
+     - STATUS_STORAGE_TOPIC=hermes-connect-statuses
