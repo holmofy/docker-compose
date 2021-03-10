@@ -1,0 +1,15 @@
+version: '2'
+
+services:
+  fluent-bit:
+    image: fluentd
+    ports:
+      - 24224:24224
+      - 24224:24224/udp
+  fluent-ui:
+    image: holmofy/fluentd-ui
+    build:
+      context: ./fluentd-ui
+      dockerfile: Dockerfile
+    ports: 
+      - 9292:9292

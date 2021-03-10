@@ -3,3 +3,4 @@
 connectors/
 target/
 .mvn/
+.git/
