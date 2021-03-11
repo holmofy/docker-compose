@@ -27,5 +27,5 @@ services:
      - CONFIG_STORAGE_TOPIC=hermes-connect-configs
      - OFFSET_STORAGE_TOPIC=hermes-connect-offsets
      - STATUS_STORAGE_TOPIC=hermes-connect-statuses
-     - KEY_CONVERTER_SCHEMA_ENABLE=false
-     - VALUE_CONVERTER_SCHEMA_ENABLE=false
+     - CONNECT_KEY_CONVERTER_SCHEMA_ENABLE=false
+     - CONNECT_VALUE_CONVERTER_SCHEMA_ENABLE=false
