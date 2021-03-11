@@ -4,3 +4,4 @@ connectors/
 target/
 .mvn/
 .git/
+.DS_Store
