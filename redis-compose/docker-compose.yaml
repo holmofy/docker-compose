@@ -5,8 +5,15 @@ services:
     image: redis:6.2-rc-alpine
     ports:
       - 6379:6379
+    
+  redis-search:
+    image: redislabs/redisearch:2.0.2
+
+  redis-bloom:
+    image: redislabs/rebloom:2.0.2
+  
   redis-ai:
-    image: redisai/redisai
+    image: redisai/redisai:1.2-M01
 
   # redis ui base web
   redis-insight:

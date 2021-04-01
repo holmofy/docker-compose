@@ -12,7 +12,7 @@
         "database.include.list": "hermes12",
         "table.include.list": "hermes12.customer_info_encrypted,hermes12.trade_info,hermes12.order_info,hermes12.trade_rate_info,hermes12.refund,hermes12.customer_stats,hermes12.trade_promotion,hermes12.action_record,hermes12.trade_grade_snapshot,hermes12.trade_expand_card",
         "database.history.kafka.bootstrap.servers": "192.168.33.118:9092,192.168.22.151:9092",
-        "database.history.kafka.topic": "debezium-schema_changes-crm",
+        "database.history.kafka.topic": "debezium-ddl-history-crm03",
         "transforms": "route",
         "transforms.route.type": "org.apache.kafka.connect.transforms.RegexRouter",
         "transforms.route.regex": "([^.]+)\\.([^.]+)\\.([^.]+)",
@@ -21,10 +21,10 @@
         "snapshot.locking.mode": "none",
         "converters": "datetime",
         "datetime.type": "com.darcytech.debezium.converter.MySqlDateTimeConverter",
-        "datetime.format.date": "YYYY-MM-dd",
+        "datetime.format.date": "yyyy-MM-dd",
         "datetime.format.time": "HH:mm:ss",
-        "datetime.format.datetime": "YYYY-MM-dd HH:mm:ss",
-        "datetime.format.timestamp": "YYYY-MM-dd HH:mm:ss",
+        "datetime.format.datetime": "yyyy-MM-dd HH:mm:ss",
+        "datetime.format.timestamp": "yyyy-MM-dd HH:mm:ss",
         "datetime.format.timestamp.zone": "UTC+8",
         "decimal.handling.mode": "string"
     }
