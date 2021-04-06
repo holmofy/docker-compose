@@ -1,0 +1,3 @@
+[submodule "tidb-docker-compose"]
+	path = tidb-docker-compose
+	url = https://github.com/pingcap/tidb-docker-compose
