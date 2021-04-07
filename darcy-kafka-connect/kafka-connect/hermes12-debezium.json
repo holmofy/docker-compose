@@ -24,5 +24,7 @@
     "datetime.format.datetime": "yyyy-MM-dd HH:mm:ss",
     "datetime.format.timestamp": "yyyy-MM-dd HH:mm:ss",
     "datetime.format.timestamp.zone": "UTC+8",
-    "decimal.handling.mode": "string"
+    "decimal.handling.mode": "string",
+    "topic.creation.default.replication.factor": 1,
+    "topic.creation.default.partitions": 6
 }
