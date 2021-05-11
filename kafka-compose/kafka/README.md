@@ -135,5 +135,5 @@ bin/kafka-server-start.sh -daemon config/server.properties
 
 坑：
 
-1. `listeners`配置，如果是在docker中需要注意
+1. `listeners`配置，如果是在docker中需要注意. 参看[这篇博客](https://www.confluent.io/blog/kafka-client-cannot-connect-to-broker-on-aws-on-docker-etc/)
 
