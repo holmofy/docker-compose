@@ -10,3 +10,6 @@
 [submodule "docker-hive"]
 	path = docker-hive
 	url = https://github.com/big-data-europe/docker-hive
+[submodule "kafka-stack-docker-compose"]
+	path = kafka-stack-docker-compose
+	url = https://github.com/conduktor/kafka-stack-docker-compose
