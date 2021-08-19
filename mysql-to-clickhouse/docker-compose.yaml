@@ -1,0 +1,57 @@
+version: '2'
+
+services: 
+    zookeeper: 
+      image: zookeeper:3.5.9
+      ports: 
+        - 2181:2181
+    kafka: 
+        image: debezium/kafka:1.4
+        ports: 
+            - 9092:9092
+        depends_on: 
+            - zookeeper
+        environment: 
+            - ZOOKEEPER_CONNECT=zookeeper:2181
+            # 3partition,1replication,delete policy
+            - CREATE_TOPICS=nginx_access:3:1:delete
+
+    mysql: 
+        image: debezium/example-mysql:1.4
+        ports: 
+            - 3306:3306
+        environment: 
+            - MYSQL_ROOT_PASSWORD=debezium
+            - MYSQL_USER=debezium-cdc
+            - MYSQL_PASSWORD=debezium-passwd
+        volumes: 
+            - ./mysql/initdb.d:/docker-entrypoint-initdb.d
+    clickhouse-server: 
+      image: yandex/clickhouse-server
+      ports: 
+        - 8123:8123  # http interface
+        - 9000:9000  # native client
+      depends_on: 
+        - kafka
+      volumes: 
+        - ./clickhouse/initdb.d:/docker-entrypoint-initdb.d
+
+    connect: 
+        image: debezium/connect:1.4
+        ports:
+            - 8083:8083
+            - 5005:5005
+        depends_on: 
+            - mysql
+            - kafka
+        environment:
+            - BOOTSTRAP_SERVERS=kafka:9092
+            - GROUP_ID=1
+            - CONFIG_STORAGE_TOPIC=__connect_configs
+            - OFFSET_STORAGE_TOPIC=__connect_offsets
+            - STATUS_STORAGE_TOPIC=__connect_statuses
+            - CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE=false
+            - CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=false
+            - CONNECT_TOPIC_CREATION_ENABLE=true
+            - CONNECT_TOPIC_CREATION_DEFAULT_REPLICATION_FACTOR=1
+            - CONNECT_TOPIC_CREATION_DEFAULT_PARTITIONS=6
