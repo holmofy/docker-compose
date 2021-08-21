@@ -13,3 +13,9 @@
 [submodule "kafka-stack-docker-compose"]
 	path = kafka-stack-docker-compose
 	url = https://github.com/conduktor/kafka-stack-docker-compose
+[submodule "docker-elk"]
+	path = docker-elk
+	url = https://github.com/deviantony/docker-elk
+[submodule "debezium-examples"]
+	path = debezium-examples
+	url = https://github.com/debezium/debezium-examples
