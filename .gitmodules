@@ -19,3 +19,6 @@
 [submodule "debezium-examples"]
 	path = debezium-examples
 	url = https://github.com/debezium/debezium-examples
+[submodule "docker-grafana-loki-fluent-bit-sample"]
+	path = docker-grafana-loki-fluent-bit-sample
+	url = https://github.com/thakkaryash94/docker-grafana-loki-fluent-bit-sample
