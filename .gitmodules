@@ -19,3 +19,6 @@
 [submodule "debezium-examples"]
 	path = debezium-examples
 	url = https://github.com/debezium/debezium-examples
+[submodule "wordpress-docker-compose"]
+	path = wordpress-docker-compose
+	url = git@github.com:nezhar/wordpress-docker-compose.git
