@@ -21,4 +21,7 @@
 	url = https://github.com/debezium/debezium-examples
 [submodule "wordpress-docker-compose"]
 	path = wordpress-docker-compose
-	url = git@github.com:nezhar/wordpress-docker-compose.git
+	url = https://github.com/nezhar/wordpress-docker-compose.git
+[submodule "docker-grafana-loki-fluent-bit-sample"]
+	path = docker-grafana-loki-fluent-bit-sample
+	url = https://github.com/thakkaryash94/docker-grafana-loki-fluent-bit-sample
